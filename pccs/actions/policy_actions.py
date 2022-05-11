@@ -133,14 +133,32 @@ def delete_custom_policy_by_id(base_url, token, policy_id, bc_proxy=False):
         print(f"Error occurred while deleting policy: {e}")
 
 
-def update_custom_policy_by_id(base_url, token, policy_id, file_path, bc_proxy=False, verbose=False):
-    url = f"{base_url}/bridgecrew/api/v1/policies/{policy_id}"
-    headers = {
-        'Accept': 'application/json; charset=UTF-8',
-        'Content-Type': 'application/json',
-        'x-redlock-auth': token
-    }
-    payload = get_policy_payload(file_path)
+def update_policy_status(base_url, token, policy_id, status):
+    """
+     https://prisma.pan.dev/api/cloud/cspm/policy#operation/update-policy-status
+    """
+    url = f"{base_url}/policy/{policy_id}/status/{status}"
+    headers = auth.get_auth_headers(token)
+    try:
+        response = requests.request("PATCH", url, headers=headers)
+        response.raise_for_status()
+        print(f"{'Enabled' if status else 'Disabled'} {policy_id}")
+    except exceptions.SSLError:
+        print("SSL error occurred. Please disable VPN and try again.")
+    except Exception as e:
+        print(f"Error occurred while listing policies: {e}")
+
+
+def update_custom_policy_by_id(base_url, token, policy_id, file_path, status, bc_proxy=False):
+    """
+    https://prisma.pan.dev/api/cloud/cspm/policy#operation/update-policy
+    """
+    headers = auth.get_auth_headers(token, True)
+    payload = get_policy_payload(file_path, bc_proxy, status)
+    if bc_proxy:
+        url = f"{base_url}/bridgecrew/api/v1/policies/{policy_id}"
+    else:
+        url = f"{base_url}/policy/{policy_id}"
     try:
         response = requests.request("PUT", url, headers=headers, data=json.dumps(payload))
         res_json = json.loads(response.text)
@@ -151,7 +169,7 @@ def update_custom_policy_by_id(base_url, token, policy_id, file_path, bc_proxy=F
         print("SSL error occurred. Please disable VPN and try again.")
         sys.exit(1)
     except Exception as e:
-        print(f"Error occurred while publishing policy: {e}")
+        print(f"Error occurred while updating policy: {e}")
         sys.exit(1)
 
 

@@ -12,9 +12,11 @@ def run():
                                        '"https://api.prismacloud.io::<your-access-key>::<your-secret-key>"',
                         required=False)
     parser.add_argument('--list', '-l', help='List custom policies', required=False, action='store_true')
-    parser.add_argument('--publish', '-p', help='Publish policy from file', required=False)
+    parser.add_argument('--file-path', '-f', help="File path for the YAML policy", required=False)
+    parser.add_argument('--publish', '-p', help='Publish policy from file', required=False, action='store_true',
+                        default=False)
     parser.add_argument('--delete', '-d', help='Delete policy by ID', required=False, action='store_true')
-    parser.add_argument('--update', '-u', help='Update policy by ID from file', required=False)
+    parser.add_argument('--update', '-u', help='Update policy by ID', required=False, action='store_true')
     parser.add_argument('--verbose', '-v', help='Print verbose response', required=False, action='store_true',
                         default=False)
     parser.add_argument('--policy-id', '-id', help='Get policy by ID', required=False)
@@ -30,7 +32,7 @@ def run():
     parser.add_argument('--bc-proxy', '-bc', help="Use Bridgecrew API proxy (not recommended)", action='store_true',
                         default=False, required=False)
     parser.add_argument('--enable', help="Enable policy", action='store_true', required=False, default=False)
-    parser.add_argument('--disable', help="Disable policy", action='store_true', required=False, default=True)
+    parser.add_argument('--disable', help="Disable policy", action='store_true', required=False, default=False)
     parser.add_argument('--version', action='version', version='2.0')
     args = parser.parse_args()
 
@@ -49,6 +51,9 @@ def run():
     if not token:
         sys.exit(1)
 
+    if args.enable and args.disable:
+        print("ERROR: Can't --enable and --disable. Use one option")
+        sys.exit(1)
     # status of policy - True implies enabled and False implies disabled.
     status = args.enable or not args.disable
 
@@ -62,10 +67,25 @@ def run():
             policy_actions.get_custom_policies(base_url, token, args.query, args.bc_proxy, args.verbose)
 
     if args.publish:
-        policy_actions.create_custom_policy(base_url, token, args.publish, args.bc_proxy, status)
+        if args.file_path:
+            policy_actions.create_custom_policy(base_url, token, args.file_path, args.bc_proxy, status)
+        else:
+            print("ERROR: Missing required arguments: --file-path/-f")
+            sys.exit(1)
+
+    if args.enable or args.disable:
+        if args.policy_id:
+            policy_actions.update_policy_status(base_url, token, args.policy_id, status)
+        else:
+            print("ERROR: Missing required arguments: --policy-id/-id")
+            s
 
     if args.update and args.policy_id:
-        policy_actions.update_custom_policy_by_id(base_url, token, args.policy_id, args.update)
+        if args.file_path:
+            policy_actions.update_custom_policy_by_id(base_url, token, args.policy_id, args.file_path, status, args.bc_proxy)
+        else:
+            print("ERROR: Missing required arguments: --file-path/-f")
+            sys.exit(1)
 
     if args.delete and args.policy_id:
         policy_actions.delete_custom_policy_by_id(base_url, token, args.policy_id, args.bc_proxy)
