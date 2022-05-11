@@ -78,7 +78,7 @@ def run():
             policy_actions.update_policy_status(base_url, token, args.policy_id, status)
         else:
             print("ERROR: Missing required arguments: --policy-id/-id")
-            s
+            sys.exit(1)
 
     if args.update and args.policy_id:
         if args.file_path:
